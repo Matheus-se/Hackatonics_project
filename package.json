@@ -11,7 +11,7 @@
   "dependencies": {
     "@clerk/nextjs": "^5.1.6",
     "@prisma/adapter-pg": "^5.16.1",
-    "@prisma/client": "^5.16.1",
+    "@prisma/client": "^5.16.2",
     "@xata.io/cli": "^0.15.15",
     "@xata.io/client": "^0.29.5",
     "inngest": "^3.19.18",
@@ -28,7 +28,7 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.4",
     "postcss": "^8",
-    "prisma": "^5.16.1",
+    "prisma": "^5.16.2",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

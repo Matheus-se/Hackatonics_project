@@ -65,7 +65,7 @@ export default async function Home() {
 Xata is a serverless data platform, built on PostgreSQL which
             provides a full-text and vector search engine, record-level file
             attachments, table-level aggregations and an optional ask endpoint
-            to engage with with OpenAI's ChatGPT API.
+            to engage with with OpenAI&apos;s ChatGPT API.
           </p>
         </a>
 

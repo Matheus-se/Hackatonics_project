@@ -4,7 +4,7 @@ import Form from "./Form";
 import { prisma } from "@/prisma/client";
 import { inngest } from "@/inngest";
 
-export async function create(message: string, userId: string) {
+async function create(message: string, userId: string) {
   "use server";
   if (!userId) {
     throw new Error("You must be signed in to create messages!");
@@ -68,7 +68,7 @@ export default async function DashboardPage() {
             Xata is a serverless data platform, providing a full-text and vector
             search engine, record-level file attachments, table-level
             aggregations and an optional ask endpoint to engage with with
-            OpenAI's ChatGPT API.
+            OpenAI&apos;s ChatGPT API.
           </p>
         </a>
 
