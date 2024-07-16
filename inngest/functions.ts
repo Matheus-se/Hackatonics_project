@@ -3,15 +3,11 @@ import OpenAI from "openai";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Functions exported from this file are exposed to Inngest
-// See: @/app/api/inngest/route.ts
-
 export const messageSent = inngest.createFunction(
-  { id: "message-sent" }, // Each function should have a unique ID
-  { event: "app/message.sent" }, // When an event by this name received, this function will run
+  { id: "message-sent" },
+  { event: "app/message.sent" },
 
   async ({ event, step, prisma }) => {
-    // Fetch data from the database
     const message = await prisma.messages.findUnique({
       where: {
         xata_id: event.data.messageId,
@@ -22,9 +18,6 @@ export const messageSent = inngest.createFunction(
       return;
     }
 
-    // You can execute code that interacts with external services
-    // All code is retried automatically on failure
-    // Read more about Inngest steps: https://www.inngest.com/docs/learn/inngest-steps
     const reply = await step.run("create-reply", async () => {
       if (OPENAI_API_KEY) {
         const openai = new OpenAI();
@@ -58,13 +51,10 @@ export const messageSent = inngest.createFunction(
 );
 
 export const imageSent = inngest.createFunction(
-  { id: "image-sent" }, // Each function should have a unique ID
-  { event: "app/image.sent" }, // When an event by this name received, this function will run
+  { id: "image-sent" },
+  { event: "app/image.sent" },
 
   async ({ event, step }) => {
-    // You can execute code that interacts with external services
-    // All code is retried automatically on failure
-    // Read more about Inngest steps: https://www.inngest.com/docs/learn/inngest-steps
     if (!event.data.imageURL) return
     if (OPENAI_API_KEY) {
       const openai = new OpenAI();
@@ -112,5 +102,33 @@ export const imageSent = inngest.createFunction(
     } else {
       return "Add OPENAI_API_KEY environment variable to get AI responses.";
     }
+  }
+);
+
+export const getUser = inngest.createFunction(
+  { id: "create-user" },
+  { event: "app/create.user" },
+
+  async ({ event, clerkClient }) => {
+    const message = await clerkClient.users.createUser({
+      firstName: event.data.firstName,
+      lastName: event.data.lastName,
+      emailAddress: [ event.data.email ],
+      password: event.data.password,
+      createdAt: new Date()
+    })
+
+    return { event, body: {id: message.id, username: message.firstName, photo: message.imageUrl}};
+  }
+);
+
+export const createUser = inngest.createFunction(
+  { id: "get-user" },
+  { event: "app/get.user" },
+
+  async ({ event, clerkClient }) => {
+    const message = await clerkClient.users.getUser(event.data.userId)
+
+    return { event, body: {id: message.id, username: message.firstName, photo: message.imageUrl}};
   }
 );

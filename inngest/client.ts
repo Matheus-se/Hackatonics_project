@@ -1,7 +1,28 @@
 import { Inngest, InngestMiddleware } from "inngest";
 import { PrismaClient } from "@prisma/client";
+import { createClerkClient } from "@clerk/nextjs/server";
 
-// make Prisma available in the Inngest functions
+const clerkMiddleware = new InngestMiddleware({
+  name: "Clerk Middleware",
+  init() {
+    const clerkClient = createClerkClient({secretKey: process.env.CLERK_SECRET_KEY});
+
+    return {
+      onFunctionRun(ctx) {
+        return {
+          transformInput(ctx) {
+            return {
+              ctx: {
+                clerkClient,
+              },
+            };
+          },
+        };
+      },
+    };
+  },
+});
+
 const prismaMiddleware = new InngestMiddleware({
   name: "Prisma Middleware",
   init() {
@@ -12,7 +33,6 @@ const prismaMiddleware = new InngestMiddleware({
         return {
           transformInput(ctx) {
             return {
-              // Anything passed via `ctx` will be merged with the function's arguments
               ctx: {
                 prisma,
               },
@@ -24,8 +44,7 @@ const prismaMiddleware = new InngestMiddleware({
   },
 });
 
-// Create a client to send and receive events
 export const inngest = new Inngest({
   id: "next-pxci-starter",
-  middleware: [prismaMiddleware],
+  middleware: [prismaMiddleware, clerkMiddleware],
 });
