@@ -1,27 +1,22 @@
+import { NonRetriableError } from "inngest";
 import { inngest } from "./client";
-import OpenAI from "openai";
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 export const messageSent = inngest.createFunction(
   { id: "message-sent" },
   { event: "app/message.sent" },
 
-  async ({ event, step, prisma }) => {
+  async ({ event, step, prisma, openAi }) => {
     const message = await prisma.messages.findUnique({
       where: {
         xata_id: event.data.messageId,
       },
     });
 
-    if (!message) {
-      return;
-    }
+    if (!message) return;
 
     const reply = await step.run("create-reply", async () => {
-      if (OPENAI_API_KEY) {
-        const openai = new OpenAI();
-        const completion = await openai.chat.completions.create({
+      if (openAi) {
+        const completion = await openAi.chat.completions.create({
           messages: [
             {
               role: "system",
@@ -36,7 +31,7 @@ export const messageSent = inngest.createFunction(
           completion.choices[0]?.message.content ?? "Unexpected OpenAI response"
         );
       } else {
-        return "Add OPENAI_API_KEY environment variable to get AI responses.";
+        throw new NonRetriableError("Missing environment variable: OPENAI_API_KEY.");
       }
     });
 
@@ -54,16 +49,17 @@ export const imageSent = inngest.createFunction(
   { id: "image-sent" },
   { event: "app/image.sent" },
 
-  async ({ event, step }) => {
-    if (!event.data.imageURL) return
-    if (OPENAI_API_KEY) {
-      const openai = new OpenAI();
+  async ({ event, step, openAi}) => {
+    if (!event.data.imageURL) return;
+    if (openAi) {
+      const json_response = '{animal: {type: "<inser_the_animal_type_here>", specie: "<insert_the_animal_specie_here>", family: "<insert_the_animal_family_here>", breed: "<insert_the_animal_breed_here>"}, hasAnimalOnTheImage: <true/false>}'
       const identify = await step.run("identify-image", async () => {
-        const completion = await openai.chat.completions.create({
+        const completion = await openAi.chat.completions.create({
           messages: [
             {
-              role: 'system',
-              content: 'Your job is to simply to give information about: name, type, breed, specie and familly of the animal if exists, nothing else, no more details, as concise as possible, just all the names. If there is no animal, simply respond that there is no animal on the image. If you dont know, just say you dont know'
+              role: "system",
+              content:
+                'Your job is to simply to return this json object populated pricesily no more details. If there is no animal, simply mark the hasAnimalOnTheImage as false and the animal data as null: ' + json_response,
             },
             {
               role: "user",
@@ -71,64 +67,96 @@ export const imageSent = inngest.createFunction(
                 { type: "text", text: "which breed is this animal?" },
                 {
                   type: "image_url",
-                  image_url: {url: event.data.imageURL}
+                  image_url: { url: event.data.imageURL },
                 },
               ],
             },
           ],
           model: "gpt-4o",
         });
-        console.log(completion.choices[0])
-        return completion.choices[0].message.content ?? "Sorry, I couldn't generate a response right know";
+        console.log(completion.choices[0]);
+        return (
+          completion.choices[0].message.content ??
+          "Sorry, I couldn't generate a response right know"
+        );
       });
 
       const reply = await step.run("reply-image", async () => {
-        const comment = await openai.chat.completions.create({
+        const comment = await openAi.chat.completions.create({
           messages: [
             {
-              role: 'system',
-              content: "Ayra is a female, cute, animal lover. Your job is to identify the breed or specie of the animal the user shows you on the prompt with precision and give a warm and engaging response with interesting facts. If there is no animal, simply respond that there is no animal on the image."
+              role: "system",
+              content:
+                "Ayra is a female, cute, animal lover. Your job is to identify the breed or specie of the animal the user shows you on the prompt with precision and give a warm and engaging response. If there is no animal or the user does not know, return this: 'I coundn't identify any animal in this image please try again.'.",
             },
             {
               role: "user",
-              content: identify
+              content: identify,
             },
           ],
           model: "ft:gpt-3.5-turbo-0125:personal:ayra-bot:9l4Sf6LP",
         });
-        console.log(comment.choices[0].message.content)
-        return comment.choices[0].message.content ?? "Sorry, I couldn't generate a response right know";
+        console.log(comment.choices[0].message.content);
+        return (
+          comment.choices[0].message.content ??
+          "Sorry, I couldn't generate a response right know"
+        );
       });
     } else {
-      return "Add OPENAI_API_KEY environment variable to get AI responses.";
+      throw new NonRetriableError("Missing environment variable: OPENAI_API_KEY.");
     }
   }
 );
 
-export const getUser = inngest.createFunction(
+export const createUser = inngest.createFunction(
   { id: "create-user" },
   { event: "app/create.user" },
 
   async ({ event, clerkClient }) => {
     const message = await clerkClient.users.createUser({
-      firstName: event.data.firstName,
-      lastName: event.data.lastName,
-      emailAddress: [ event.data.email ],
+      firstName: event.data.name,
+      emailAddress: [event.data.email],
       password: event.data.password,
-      createdAt: new Date()
-    })
+      createdAt: new Date(),
+    });
 
-    return { event, body: {id: message.id, username: message.firstName, photo: message.imageUrl}};
+    return {
+      body: {
+        id: message.id,
+        username: message.firstName,
+        photo: message.imageUrl,
+      },
+    };
   }
 );
 
-export const createUser = inngest.createFunction(
+export const getUser = inngest.createFunction(
   { id: "get-user" },
   { event: "app/get.user" },
 
   async ({ event, clerkClient }) => {
-    const message = await clerkClient.users.getUser(event.data.userId)
+    const message = await clerkClient.users.getUser(event.data.userId);
 
-    return { event, body: {id: message.id, username: message.firstName, photo: message.imageUrl}};
+    return {
+      body: {
+        id: message.id,
+        username: message.firstName,
+        photo: message.imageUrl,
+      },
+    };
+  }
+);
+
+export const login = inngest.createFunction(
+  { id: "login-user" },
+  { event: "app/login.user" },
+
+  async ({ event, clerkClient }) => {
+    const message = await clerkClient.users.verifyPassword({
+      userId: event.data.userId,
+      password: event.data.password,
+    });
+
+    return message.verified;
   }
 );

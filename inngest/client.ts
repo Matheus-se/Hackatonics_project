@@ -1,6 +1,30 @@
 import { Inngest, InngestMiddleware } from "inngest";
 import { PrismaClient } from "@prisma/client";
 import { createClerkClient } from "@clerk/nextjs/server";
+import OpenAI from "openai";
+
+const openAiMiddleware = new InngestMiddleware({
+  name: "OpenAi Middleware",
+  init() {
+    let openAi = null;
+    if (process.env.OPENAI_API_KEY) {
+      openAi = new OpenAI();
+    }
+    return {
+      onFunctionRun(ctx) {
+        return {
+          transformInput(ctx) {
+            return {
+              ctx: {
+                openAi,
+              },
+            };
+          },
+        };
+      },
+    };
+  },
+});
 
 const clerkMiddleware = new InngestMiddleware({
   name: "Clerk Middleware",
@@ -46,5 +70,5 @@ const prismaMiddleware = new InngestMiddleware({
 
 export const inngest = new Inngest({
   id: "next-pxci-starter",
-  middleware: [prismaMiddleware, clerkMiddleware],
+  middleware: [prismaMiddleware, clerkMiddleware, openAiMiddleware],
 });
