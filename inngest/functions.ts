@@ -5,19 +5,22 @@ export const imageSent = inngest.createFunction(
   { event: "app/image.sent" },
 
   async ({ event, prisma}) => {
-    return await prisma.scan.create({
-      data: {
-        image: event.data.imageUrl,
-        name: event.data.name,
-        text: event.data.text,
-        position_x: event.data.position_x,
-        position_y: event.data.position_y,
-        is_pet: event.data.pet,
-        author: {
-          connect: {id: event.data.userId}
-        }
-      }
-    })
+    try {
+      await prisma.scan.create({
+        data: {
+          image: event.data.imageUrl,
+          name: event.data.name,
+          text: event.data.text,
+          position_x: event.data.position_x,
+          position_y: event.data.position_y,
+          is_pet: event.data.pet,
+          author: {
+            connect: {id: event.data.userId}
+          }
+        }})
+    } finally {
+      await prisma.$disconnect()
+    }
   }
 );
 
@@ -26,11 +29,15 @@ export const newUser = inngest.createFunction(
   { event: "app/new.user" },
 
   async ({ event, prisma}) => {
-    return await prisma.user.create({
-      data: {
-        id: event.data.userId,
-        name: event.data.name
-      }
-    })
+    try {
+      await prisma.user.create({
+        data: {
+          id: event.data.userId,
+          name: event.data.name
+        }
+      })
+    } finally {
+      await prisma.$disconnect()
+    }
   }
 );
