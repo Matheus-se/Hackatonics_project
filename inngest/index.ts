@@ -1,5 +1,5 @@
-import { imageSent, messageSent } from "./functions";
+import { imageSent, newUser } from "./functions";
 
-export const functions = [messageSent, imageSent];
+export const functions = [imageSent, newUser];
 
 export { inngest } from "./client";
