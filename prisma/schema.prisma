@@ -1,14 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-
-  // Enable if using driver adapters
-  // previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -17,13 +8,30 @@ datasource db {
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
-model messages {
-  text   String
-  author String
+model Scan {
+  id          Int         @id @default(autoincrement())
+  image       String
+  name        String
+  text        String
+  position_x  String
+  position_y  String
+  is_pet      Boolean
 
-  // xata fields
+  author         User @relation(fields: [authorId], references: [id])
+  authorId       String
   xata_updatedat DateTime @default(now()) @db.Timestamptz(6)
-  xata_id        String   @unique(map: "_pgroll_users_xata_id_key") @default(dbgenerated("('rec_'::text || (xata_private.xid())::text)"))
+  xata_id        String   @unique(map: "_scans_key") @default(dbgenerated("('rec_'::text || (xata_private.xid())::text)"))
+  xata_version   Int      @default(0)
+  xata_createdat DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model User {
+  id      String @id @unique
+  name    String
+  scans   Scan[]
+
+  xata_updatedat DateTime @default(now()) @db.Timestamptz(6)
+  xata_id        String   @unique(map: "_user_scans_key") @default(dbgenerated("('rec_'::text || (xata_private.xid())::text)"))
   xata_version   Int      @default(0)
   xata_createdat DateTime @default(now()) @db.Timestamptz(6)
 }
